@@ -124,7 +124,3 @@ def news_sentiment():
         avg_sentiment = np.mean(sentiments) if sentiments else 0
         return jsonify({"average_sentiment": avg_sentiment})
     return jsonify({"error": "Failed to fetch news"}), 400
-
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
