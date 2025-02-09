@@ -59,7 +59,7 @@ def analyze_sentiment(news_data):
 def get_historical_bitcoin_data():
     """Fetch historical Bitcoin price data."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=30)
+    start_date = end_date - timedelta(days=10)
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
