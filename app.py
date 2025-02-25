@@ -12,19 +12,15 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
-# Download VADER lexicon for sentiment analysis (only runs once)
 nltk.download("vader_lexicon")
 
-# Load environment variables
 load_dotenv()
 
-# Retrieve API keys
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
 
-# Set up Flask app
 app = Flask(__name__)
-CORS(app)  # Allow frontend access
+CORS(app)  
 
 logging.basicConfig(level=logging.INFO)
 
@@ -51,7 +47,7 @@ def analyze_sentiment(news_data):
     for article in news_data.get("articles", []):
         text = f"{article.get('title', '')} {article.get('description', '')}".strip()
         sentiment_score = sid.polarity_scores(text)
-        sentiments.append(sentiment_score["compound"])  # Only store compound score
+        sentiments.append(sentiment_score["compound"])  
 
     return sentiments
 
@@ -65,7 +61,7 @@ def get_historical_bitcoin_data():
 
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical"
     params = {
-        "id": 1,  # Bitcoin's CoinMarketCap ID
+        "id": 1, 
         "convert": "USD",
         "time_start": start_date_str,
         "time_end": end_date_str,
@@ -97,7 +93,6 @@ def predict_price():
     model = make_pipeline(PolynomialFeatures(2), LinearRegression())
     model.fit(days_since_start, prices)
 
-    # Predicting for December 31, 2025
     end_of_2025 = datetime(2025, 12, 31, tzinfo=timezone.utc)
     days_until_end_of_2025 = (end_of_2025 - datetime.now(timezone.utc)).days
     future_day = np.array([[days_until_end_of_2025]])
@@ -127,5 +122,5 @@ def news_sentiment():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # Render provides a PORT variable
+    port = int(os.getenv("PORT", 5000))  
     app.run(host="0.0.0.0", port=port)
