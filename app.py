@@ -12,8 +12,10 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
+# Download NLTK VADER lexicon for sentiment analysis
 nltk.download("vader_lexicon")
 
+# Load environment variables
 load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -24,6 +26,7 @@ CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 
+# Check API keys
 if not NEWS_API_KEY or not COINMARKETCAP_API_KEY:
     logging.error("API keys not found. Check MainKeys.env")
 
@@ -58,7 +61,7 @@ def analyze_sentiment(news_data):
 def get_historical_bitcoin_data():
     """Fetch historical Bitcoin price data (1 month available)."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=30)  # Adjusted to get 1 month of data
+    start_date = end_date - timedelta(days=30)  # Ensure request stays within the 30-day limit
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
@@ -76,7 +79,14 @@ def get_historical_bitcoin_data():
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
-        return data.get("data", {}).get("quotes", [])
+
+        # Ensure response contains expected data
+        if "data" not in data or "quotes" not in data["data"]:
+            logging.error(f"Unexpected API response: {data}")
+            return None
+
+        return data["data"]["quotes"]
+
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching historical Bitcoin data: {e}")
         return None
@@ -88,23 +98,35 @@ def predict_price():
     if not historical_data:
         return None
 
-    prices = [item["quote"]["USD"]["close"] for item in historical_data if "quote" in item]
-    timestamps = [datetime.strptime(item["time_open"].split("T")[0], "%Y-%m-%d") for item in historical_data]
+    prices = []
+    timestamps = []
+
+    for item in historical_data:
+        try:
+            price = item["quote"]["USD"]["close"]
+            time_open = item["time_open"].split("T")[0]  # Extract date
+            prices.append(price)
+            timestamps.append(datetime.strptime(time_open, "%Y-%m-%d"))
+        except KeyError:
+            logging.warning(f"Skipping malformed data: {item}")
 
     if not prices or not timestamps:
         logging.error("No valid price or timestamp data available for prediction.")
         return None
 
+    # Convert timestamps to number of days
     days_since_start = np.array([(t - timestamps[0]).days for t in timestamps]).reshape(-1, 1)
 
+    # Polynomial Regression Model
     model = make_pipeline(PolynomialFeatures(2), LinearRegression())
     model.fit(days_since_start, prices)
 
+    # Predict price for Dec 31, 2025
     end_of_2025 = datetime(2025, 12, 31, tzinfo=timezone.utc)
     days_until_end_of_2025 = (end_of_2025 - datetime.now(timezone.utc)).days
     future_day = np.array([[days_until_end_of_2025]])
-    predicted_price = model.predict(future_day)
 
+    predicted_price = model.predict(future_day)
     return predicted_price[0]
 
 
