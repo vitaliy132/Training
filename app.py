@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 nltk.download("vader_lexicon")
 
-load_dotenv()
+load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 COINMARKETCAP_API_KEY = os.getenv("COINMARKETCAP_API_KEY")
