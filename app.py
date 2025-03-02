@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 nltk.download("vader_lexicon")
 
+# Load environment variables
 load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -53,15 +54,15 @@ def analyze_sentiment(news_data):
 
 
 def get_historical_bitcoin_data():
-    """Fetch historical Bitcoin price data."""
+    """Fetch historical Bitcoin price data (limited to 1 month)."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=10)
+    start_date = end_date - timedelta(days=30)  # Get max available data (1 month)
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical"
     params = {
-        "id": 1, 
+        "id": 1,  # Bitcoin ID
         "convert": "USD",
         "time_start": start_date_str,
         "time_end": end_date_str,
