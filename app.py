@@ -30,7 +30,6 @@ logging.basicConfig(level=logging.INFO)
 if not NEWS_API_KEY or not COINMARKETCAP_API_KEY:
     logging.error("API keys not found. Check MainKeys.env")
 
-
 def get_bitcoin_news():
     """Fetch latest Bitcoin news."""
     url = "https://newsapi.org/v2/everything"
@@ -44,7 +43,6 @@ def get_bitcoin_news():
         logging.error(f"Error fetching Bitcoin news: {e}")
         return None
 
-
 def analyze_sentiment(news_data):
     """Perform sentiment analysis on Bitcoin news."""
     sid = SentimentIntensityAnalyzer()
@@ -57,11 +55,10 @@ def analyze_sentiment(news_data):
 
     return sentiments
 
-
 def get_historical_bitcoin_data():
-    """Fetch historical Bitcoin price data (last 30 days only)."""
+    """Fetch historical Bitcoin price data (last 14 days)."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=30)  # Max allowed range
+    start_date = end_date - timedelta(days=14)  # Fetch last 14 days instead of 30
 
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
@@ -77,7 +74,7 @@ def get_historical_bitcoin_data():
     headers = {
         "X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY,
         "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0"  # Added to prevent blocking
+        "User-Agent": "Mozilla/5.0"
     }
 
     try:
@@ -94,11 +91,10 @@ def get_historical_bitcoin_data():
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching historical Bitcoin data: {e}")
         try:
-            logging.error(f"Full API Response: {response.json()}")  # Log full response for debugging
+            logging.error(f"Full API Response: {response.json()}")
         except:
             logging.error("Could not decode API response.")
         return None
-
 
 def predict_price():
     """Predict Bitcoin price for end of 2025 using regression model."""
@@ -125,7 +121,6 @@ def predict_price():
 
     return predicted_price[0]
 
-
 @app.route("/predict", methods=["GET"])
 def predict():
     """API endpoint for Bitcoin price prediction."""
@@ -133,7 +128,6 @@ def predict():
     if predicted_price is None:
         return jsonify({"error": "Failed to predict Bitcoin price"}), 500
     return jsonify({"predicted_price": predicted_price})
-
 
 @app.route("/news-sentiment", methods=["GET"])
 def news_sentiment():
@@ -144,7 +138,6 @@ def news_sentiment():
         avg_sentiment = np.mean(sentiments) if sentiments else 0
         return jsonify({"average_sentiment": avg_sentiment})
     return jsonify({"error": "Failed to fetch news"}), 400
-
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
