@@ -12,7 +12,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
-# Download NLTK VADER lexicon for sentiment analysis
+# Download required NLTK data
 nltk.download("vader_lexicon")
 
 # Load environment variables
@@ -59,36 +59,44 @@ def analyze_sentiment(news_data):
 
 
 def get_historical_bitcoin_data():
-    """Fetch historical Bitcoin price data (1 month available)."""
+    """Fetch historical Bitcoin price data (last 30 days only)."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=30)  # Ensure request stays within the 30-day limit
+    start_date = end_date - timedelta(days=30)  # Max allowed range
+
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
-    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/ohlcv/historical"
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/historical"
     params = {
-        "id": 1,
+        "symbol": "BTC",  # Use symbol instead of ID
         "convert": "USD",
         "time_start": start_date_str,
         "time_end": end_date_str,
         "interval": "daily",
     }
-    headers = {"X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY, "Accept": "application/json"}
+    headers = {
+        "X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY,
+        "Accept": "application/json",
+        "User-Agent": "Mozilla/5.0"  # Added to prevent blocking
+    }
 
     try:
         response = requests.get(url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
 
-        # Ensure response contains expected data
-        if "data" not in data or "quotes" not in data["data"]:
+        if "data" not in data:
             logging.error(f"Unexpected API response: {data}")
             return None
 
-        return data["data"]["quotes"]
-
+        return data.get("data", {}).get("quotes", [])
+    
     except requests.exceptions.RequestException as e:
         logging.error(f"Error fetching historical Bitcoin data: {e}")
+        try:
+            logging.error(f"Full API Response: {response.json()}")  # Log full response for debugging
+        except:
+            logging.error("Could not decode API response.")
         return None
 
 
@@ -98,35 +106,23 @@ def predict_price():
     if not historical_data:
         return None
 
-    prices = []
-    timestamps = []
-
-    for item in historical_data:
-        try:
-            price = item["quote"]["USD"]["close"]
-            time_open = item["time_open"].split("T")[0]  # Extract date
-            prices.append(price)
-            timestamps.append(datetime.strptime(time_open, "%Y-%m-%d"))
-        except KeyError:
-            logging.warning(f"Skipping malformed data: {item}")
+    prices = [item["quote"]["USD"]["close"] for item in historical_data if "quote" in item]
+    timestamps = [datetime.strptime(item["time_open"].split("T")[0], "%Y-%m-%d") for item in historical_data]
 
     if not prices or not timestamps:
         logging.error("No valid price or timestamp data available for prediction.")
         return None
 
-    # Convert timestamps to number of days
     days_since_start = np.array([(t - timestamps[0]).days for t in timestamps]).reshape(-1, 1)
 
-    # Polynomial Regression Model
     model = make_pipeline(PolynomialFeatures(2), LinearRegression())
     model.fit(days_since_start, prices)
 
-    # Predict price for Dec 31, 2025
     end_of_2025 = datetime(2025, 12, 31, tzinfo=timezone.utc)
     days_until_end_of_2025 = (end_of_2025 - datetime.now(timezone.utc)).days
     future_day = np.array([[days_until_end_of_2025]])
-
     predicted_price = model.predict(future_day)
+
     return predicted_price[0]
 
 
