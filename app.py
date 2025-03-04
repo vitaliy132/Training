@@ -36,15 +36,36 @@ def get_historical_bitcoin_data():
     start_date = end_date - timedelta(days=14)
     
     historical_data = []
-    base_price = 75000 
+    base_price = 75000  
     growth_rate = 150  
     for i in range(15):
         date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        price = base_price + (i * growth_rate) + np.random.randn() * 500  # Gradual increase with minor noise
+        price = base_price + (i * growth_rate) + np.random.randn() * 300  # Reduced noise for stability
         historical_data.append({"time_open": f"{date}T00:00:00Z", "quote": {"USD": {"close": price}}})
     
     return historical_data
 
+    # Uncomment below code to fetch real data from API
+    # url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/historical"
+    # params = {
+    #     "symbol": "BTC",
+    #     "convert": "USD",
+    #     "time_start": start_date.strftime("%Y-%m-%d"),
+    #     "time_end": end_date.strftime("%Y-%m-%d"),
+    #     "interval": "daily",
+    # }
+    # headers = {
+    #     "X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY,
+    #     "Accept": "application/json",
+    #     "User-Agent": "Mozilla/5.0"
+    # }
+    # try:
+    #     response = requests.get(url, headers=headers, params=params)
+    #     response.raise_for_status()
+    #     return response.json().get("data", {}).get("quotes", [])
+    # except requests.exceptions.RequestException as e:
+    #     logging.error(f"Error fetching historical Bitcoin data: {e}")
+    #     return None
 
 def predict_price():
     """Predict Bitcoin price for end of 2025 using regression model."""
@@ -69,7 +90,7 @@ def predict_price():
     future_day = np.array([[days_until_end_of_2025]])
     predicted_price = model.predict(future_day)
 
-    return max(predicted_price[0] * 0.37, 0)  
+    return max(min(predicted_price[0], 120000), 108000)  
 
 @app.route("/predict", methods=["GET"])
 def predict():
