@@ -11,8 +11,10 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
+# Download required NLTK data
 nltk.download("vader_lexicon")
 
+# Load environment variables
 load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -23,17 +25,18 @@ CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 
+# Check API keys
 if not NEWS_API_KEY or not COINMARKETCAP_API_KEY:
     logging.error("API keys not found. Check MainKeys.env")
 
 def get_historical_bitcoin_data():
-    """Simulated historical Bitcoin price data (last 14 days) adjusted to predict realistically."""
+    """Simulated historical Bitcoin price data (last 14 days)."""
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=14)
     
     historical_data = []
-    base_price = 95000  
-    growth_rate = np.linspace(150, 300, 15)  
+    base_price = 95000  # Start closer to expected range
+    growth_rate = np.linspace(150, 300, 15)  # Slightly increasing growth over time
     
     for i in range(15):
         date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
@@ -85,9 +88,10 @@ def predict_price():
     end_of_2025 = datetime(2025, 12, 31, tzinfo=timezone.utc)
     days_until_end_of_2025 = (end_of_2025 - datetime.now(timezone.utc)).days
     future_day = np.array([[days_until_end_of_2025]])
-    predicted_price = model.predict(future_day)[0]
+    
+    predicted_price = model.predict(future_day)[0]  # No upper/lower bounds applied
 
-    return max(min(predicted_price, 120000), 108000)
+    return predicted_price
 
 @app.route("/predict", methods=["GET"])
 def predict():
