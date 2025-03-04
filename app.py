@@ -26,75 +26,43 @@ CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 
-# Check API keys
 if not NEWS_API_KEY or not COINMARKETCAP_API_KEY:
     logging.error("API keys not found. Check MainKeys.env")
 
-def get_bitcoin_news():
-    """Fetch latest Bitcoin news."""
-    url = "https://newsapi.org/v2/everything"
-    params = {"q": "bitcoin", "apiKey": NEWS_API_KEY, "language": "en", "sortBy": "publishedAt", "pageSize": 5}
-
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching Bitcoin news: {e}")
-        return None
-
-def analyze_sentiment(news_data):
-    """Perform sentiment analysis on Bitcoin news."""
-    sid = SentimentIntensityAnalyzer()
-    sentiments = []
-
-    for article in news_data.get("articles", []):
-        text = f"{article.get('title', '')} {article.get('description', '')}".strip()
-        sentiment_score = sid.polarity_scores(text)
-        sentiments.append(sentiment_score["compound"])
-
-    return sentiments
-
 def get_historical_bitcoin_data():
-    """Fetch historical Bitcoin price data (last 14 days)."""
+    """Simulated historical Bitcoin price data (last 14 days)."""
     end_date = datetime.now(timezone.utc)
-    start_date = end_date - timedelta(days=14)  # Fetch last 14 days instead of 30
-
-    start_date_str = start_date.strftime("%Y-%m-%d")
-    end_date_str = end_date.strftime("%Y-%m-%d")
-
-    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/historical"
-    params = {
-        "symbol": "BTC",  # Use symbol instead of ID
-        "convert": "USD",
-        "time_start": start_date_str,
-        "time_end": end_date_str,
-        "interval": "daily",
-    }
-    headers = {
-        "X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY,
-        "Accept": "application/json",
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    try:
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-
-        if "data" not in data:
-            logging.error(f"Unexpected API response: {data}")
-            return None
-
-        return data.get("data", {}).get("quotes", [])
+    start_date = end_date - timedelta(days=14)
     
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching historical Bitcoin data: {e}")
-        try:
-            logging.error(f"Full API Response: {response.json()}")
-        except:
-            logging.error("Could not decode API response.")
-        return None
+    historical_data = []
+    for i in range(15):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        price = 40000 + np.random.randn() * 2000  # Simulating price with noise
+        historical_data.append({"time_open": f"{date}T00:00:00Z", "quote": {"USD": {"close": price}}})
+    
+    return historical_data
+
+    # Uncomment below code to fetch real data from API
+    # url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/historical"
+    # params = {
+    #     "symbol": "BTC",
+    #     "convert": "USD",
+    #     "time_start": start_date.strftime("%Y-%m-%d"),
+    #     "time_end": end_date.strftime("%Y-%m-%d"),
+    #     "interval": "daily",
+    # }
+    # headers = {
+    #     "X-CMC_PRO_API_KEY": COINMARKETCAP_API_KEY,
+    #     "Accept": "application/json",
+    #     "User-Agent": "Mozilla/5.0"
+    # }
+    # try:
+    #     response = requests.get(url, headers=headers, params=params)
+    #     response.raise_for_status()
+    #     return response.json().get("data", {}).get("quotes", [])
+    # except requests.exceptions.RequestException as e:
+    #     logging.error(f"Error fetching historical Bitcoin data: {e}")
+    #     return None
 
 def predict_price():
     """Predict Bitcoin price for end of 2025 using regression model."""
@@ -128,16 +96,6 @@ def predict():
     if predicted_price is None:
         return jsonify({"error": "Failed to predict Bitcoin price"}), 500
     return jsonify({"predicted_price": predicted_price})
-
-@app.route("/news-sentiment", methods=["GET"])
-def news_sentiment():
-    """API endpoint for Bitcoin news sentiment analysis."""
-    news = get_bitcoin_news()
-    if news:
-        sentiments = analyze_sentiment(news)
-        avg_sentiment = np.mean(sentiments) if sentiments else 0
-        return jsonify({"average_sentiment": avg_sentiment})
-    return jsonify({"error": "Failed to fetch news"}), 400
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
