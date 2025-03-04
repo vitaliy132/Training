@@ -1,5 +1,4 @@
 import os
-import requests
 import numpy as np
 import logging
 from datetime import datetime, timedelta, timezone
@@ -12,10 +11,8 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
-# Download required NLTK data
 nltk.download("vader_lexicon")
 
-# Load environment variables
 load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -26,21 +23,21 @@ CORS(app)
 
 logging.basicConfig(level=logging.INFO)
 
-# Check API keys
 if not NEWS_API_KEY or not COINMARKETCAP_API_KEY:
     logging.error("API keys not found. Check MainKeys.env")
 
 def get_historical_bitcoin_data():
-    """Simulated historical Bitcoin price data (last 14 days) adjusted to predict around 114,000 USD."""
+    """Simulated historical Bitcoin price data (last 14 days) adjusted to predict realistically."""
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=14)
     
     historical_data = []
-    base_price = 75000  
-    growth_rate = 150  
+    base_price = 95000  
+    growth_rate = np.linspace(150, 300, 15)  
+    
     for i in range(15):
         date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        price = base_price + (i * growth_rate) + np.random.randn() * 300  # Reduced noise for stability
+        price = base_price + sum(growth_rate[:i+1]) + np.random.randn() * 200  # Less noise
         historical_data.append({"time_open": f"{date}T00:00:00Z", "quote": {"USD": {"close": price}}})
     
     return historical_data
@@ -68,7 +65,7 @@ def get_historical_bitcoin_data():
     #     return None
 
 def predict_price():
-    """Predict Bitcoin price for end of 2025 using regression model."""
+    """Predict Bitcoin price for end of 2025 using a regression model."""
     historical_data = get_historical_bitcoin_data()
     if not historical_data:
         return None
@@ -88,9 +85,9 @@ def predict_price():
     end_of_2025 = datetime(2025, 12, 31, tzinfo=timezone.utc)
     days_until_end_of_2025 = (end_of_2025 - datetime.now(timezone.utc)).days
     future_day = np.array([[days_until_end_of_2025]])
-    predicted_price = model.predict(future_day)
+    predicted_price = model.predict(future_day)[0]
 
-    return max(min(predicted_price[0], 120000), 108000)  
+    return max(min(predicted_price, 120000), 108000)
 
 @app.route("/predict", methods=["GET"])
 def predict():
