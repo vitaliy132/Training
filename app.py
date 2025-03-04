@@ -12,10 +12,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from dotenv import load_dotenv
 
-# Download required NLTK data
+
 nltk.download("vader_lexicon")
 
-# Load environment variables
 load_dotenv("./MainKeys.env")
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
